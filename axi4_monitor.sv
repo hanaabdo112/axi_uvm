@@ -69,6 +69,10 @@ package axi4_monitor_pkg;
         req.RLAST   = vif.RLAST;
         req.RREADY  = vif.RREADY;
 
+        // Derive operation type for scoreboard
+        req.is_write = (vif.AWVALID && vif.AWREADY) || (vif.WVALID && vif.WREADY);
+        req.is_read  = (vif.ARVALID && vif.ARREADY) || (vif.RVALID && vif.RREADY);
+
          ap.write(req);
            
         end

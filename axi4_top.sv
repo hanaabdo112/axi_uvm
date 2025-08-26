@@ -61,10 +61,10 @@ module axi4_top;
     initial begin
         // Initialize clock and reset
         axi4_vif.ACLK = 0;
-        // axi4_vif.ARESETn = 0;
-        
-        // // Apply reset
-        // #20 axi4_vif.ARESETn = 1;
+        axi4_vif.ARESETn = 1'b0;
+        // Apply reset for a few cycles, then release
+        #100ns;
+        axi4_vif.ARESETn = 1'b1;
         
         // Set the virtual interface in config database
         uvm_config_db#(virtual axi4_if#(32, 16, 1024))::set(null, "*", "vif", axi4_vif);
