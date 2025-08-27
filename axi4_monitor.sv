@@ -18,6 +18,8 @@ package axi4_monitor_pkg;
 
     // Track when a write has occurred and which addresses were written
     bit any_write_seen;
+    bit first_write_seen;
+    bit [ADDR_WIDTH-1:0] first_write_addr;
     bit [ADDR_WIDTH-1:0] last_awaddr;
     bit                  last_awaddr_valid;
     bit [ADDR_WIDTH-1:0] last_araddr;
@@ -38,6 +40,8 @@ package axi4_monitor_pkg;
         end
 
         any_write_seen = 1'b0;
+        first_write_seen = 1'b0;
+        first_write_addr = '0;
         last_awaddr_valid = 1'b0;
         last_araddr_valid = 1'b0;
     endfunction
@@ -95,6 +99,10 @@ package axi4_monitor_pkg;
         if (vif.WVALID && vif.WREADY) begin
             if (last_awaddr_valid) begin
                 written_by_addr[last_awaddr] = 1'b1;
+                if (!first_write_seen) begin
+                    first_write_seen = 1'b1;
+                    first_write_addr = last_awaddr;
+                end
             end
             any_write_seen     = 1'b1;
             last_awaddr_valid  = 1'b0;
@@ -103,9 +111,9 @@ package axi4_monitor_pkg;
         // Derive operation type for scoreboard with gating
         req.is_write = (vif.AWVALID && vif.AWREADY) || (vif.WVALID && vif.WREADY);
 
-        // Only consider read data after a write has occurred for that address
+        // Only consider read data for the first address that was written
         bit read_data_hs = (vif.RVALID && vif.RREADY);
-        bit read_allowed = any_write_seen && last_araddr_valid && written_by_addr.exists(last_araddr) && written_by_addr[last_araddr];
+        bit read_allowed = first_write_seen && last_araddr_valid && (last_araddr == first_write_addr);
         req.is_read  = read_data_hs && read_allowed;
 
          ap.write(req);
