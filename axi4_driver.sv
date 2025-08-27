@@ -30,7 +30,25 @@ package axi4_driver_pkg;
     endfunction
 
     virtual task run_phase(uvm_phase phase);
-       vif.ARESETn <= 1'b1;
+        // Initialize driven signals
+        vif.AWADDR <= '0;
+        vif.AWLEN  <= '0;
+        vif.AWSIZE <= 3'd2;
+        vif.AWVALID <= 1'b0;
+
+        vif.WDATA  <= '0;
+        vif.WVALID <= 1'b0;
+        vif.WLAST  <= 1'b0;
+        // Do not drive WREADY; it's driven by the DUT
+
+        vif.BREADY <= 1'b0;
+
+        vif.ARADDR <= '0;
+        vif.ARLEN  <= '0;
+        vif.ARSIZE <= 3'd2;
+        vif.ARVALID <= 1'b0;
+        vif.RREADY  <= 1'b0;
+
         forever begin
             seq_item_port.get_next_item(req);
             if(req.is_write) begin
@@ -90,25 +108,27 @@ package axi4_driver_pkg;
         vif.ARLEN = 0;  // Single transfer
         vif.ARSIZE = 2; // 4 bytes (32 bits)
         vif.ARVALID = 1;
-        
-        vif.RREADY = 1;
-        // Wait for address ready
+
+        // Wait for address handshake
         while(!vif.ARREADY) @(negedge vif.ACLK);
         @(negedge vif.ACLK);
         vif.ARVALID = 0;
-        
-        // Data phase
-        
-        while(!vif.RVALID) @(negedge vif.ACLK);
+
+        // Data phase: keep RREADY asserted until RLAST
+        vif.RREADY = 1;
+        do begin
+            while(!vif.RVALID) @(negedge vif.ACLK);
+            @(negedge vif.ACLK);
+            data = vif.RDATA;
+            if(vif.RRESP != 2'b00) begin
+                `uvm_error("DRIVER", $sformatf("Read transaction failed at address 0x%h, response: %b", addr, vif.RRESP))
+            end
+        end while (!vif.RLAST);
+
         @(negedge vif.ACLK);
-        data = vif.RDATA;
-        if(vif.RRESP != 2'b00) begin
-            `uvm_error("DRIVER", $sformatf("Read transaction failed at address 0x%h, response: %b", addr, vif.RRESP))
-        end
-        @(posedge vif.ACLK);
         vif.RREADY = 0;
-        
-          `uvm_info("DRIVER", $sformatf("Single read completed at address 0x%h, data: 0x%h", addr, data), UVM_MEDIUM)
+
+        `uvm_info("DRIVER", $sformatf("Single read completed at address 0x%h, data: 0x%h", addr, data), UVM_MEDIUM)
     endtask
 
 endclass

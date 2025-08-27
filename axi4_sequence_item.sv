@@ -27,8 +27,8 @@ class axi4_sequence_item #(
          logic                  BVALID;
          logic                  BREADY;
 
-         logic [ADDR_WIDTH-1:0] ARADDR;
-         logic [7:0]            ARLEN;
+         rand logic [ADDR_WIDTH-1:0] ARADDR;
+         rand logic [7:0]            ARLEN;
          logic [2:0]            ARSIZE;
          logic                  ARVALID;
          logic                  ARREADY;
@@ -54,6 +54,8 @@ class axi4_sequence_item #(
     constraint awaddr_c { AWADDR inside {[0:MEMORY_DEPTH-1]}; }
 
     constraint awlen_c  { (AWLEN + AWADDR) < 1024; }
+    constraint araddr_c { ARADDR inside {[0:MEMORY_DEPTH-1]}; }
+    constraint arlen_c  { (ARLEN + ARADDR) < 1024; }
  
     // constraint wdata_c {
     //     WDATA.size() == AWLEN + 1; // Ensure WDATA size matches AWLEN
